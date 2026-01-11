@@ -1,11 +1,18 @@
-// ✅ URL de ton backend Vercel
+// ===== CONFIG =====
 const API_BASE = "https://telegram-mini-app-three-dun.vercel.app";
 
-// Elements
-const ytUrl = document.getElementById("ytUrl");
-const btnAnalyze = document.getElementById("btnAnalyze");
+// Telegram WebApp (sécurité + UX)
+if (window.Telegram && Telegram.WebApp) {
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();
+}
 
+// ===== ELEMENTS =====
+const ytInput = document.getElementById("ytUrl");
+const btnAnalyze = document.getElementById("btnAnalyze");
 const result = document.getElementById("result");
+const errorEl = document.getElementById("error");
+
 const thumb = document.getElementById("thumb");
 const titleEl = document.getElementById("title");
 const channelEl = document.getElementById("channel");
@@ -15,110 +22,66 @@ const btnOpen = document.getElementById("btnOpen");
 const btnShare = document.getElementById("btnShare");
 const btnDownload = document.getElementById("btnDownload");
 
-const errorEl = document.getElementById("error");
-
-let lastWatchUrl = "";
-
-// Helpers UI
+// ===== HELPERS =====
 function showError(msg) {
-  errorEl.textContent = msg || "";
-}
-
-function hideResult() {
+  errorEl.textContent = msg;
   result.classList.add("hidden");
 }
 
-function showResult() {
-  result.classList.remove("hidden");
+function clearError() {
+  errorEl.textContent = "";
 }
 
-function setLoading(isLoading) {
-  btnAnalyze.disabled = isLoading;
-  btnAnalyze.textContent = isLoading ? "Analyse..." : "Analyser";
-}
-
-// Telegram WebApp (si ouvert dans Telegram)
-const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  // optionnel : adapter thème / bouton back etc.
-}
-
-// Analyse
+// ===== ACTION =====
 btnAnalyze.addEventListener("click", async () => {
-  const url = (ytUrl.value || "").trim();
-
-  showError("");
-  hideResult();
+  const url = ytInput.value.trim();
+  clearError();
 
   if (!url) {
-    showError("Colle un lien YouTube.");
+    showError("Veuillez coller un lien YouTube.");
     return;
   }
 
-  setLoading(true);
-
   try {
-    // ✅ IMPORTANT : encodeURIComponent pour éviter que &list=... casse le fetch
-    const apiUrl = `${API_BASE}/api/youtube-info?url=${encodeURIComponent(url)}`;
+    const response = await fetch(
+      `${API_BASE}/api/youtube-info?url=${encodeURIComponent(url)}`
+    );
 
-    const res = await fetch(apiUrl, { method: "GET" });
-
-    if (!res.ok) {
-      // on lit le texte pour afficher une erreur claire
-      const text = await res.text();
-      throw new Error(text || `Erreur API (${res.status})`);
+    if (!response.ok) {
+      throw new Error("Erreur API");
     }
 
-    const data = await res.json();
+    const data = await response.json();
 
-    // Remplir l'UI
-    titleEl.textContent = data.title || "";
-    channelEl.textContent = data.channelTitle ? `Chaîne : ${data.channelTitle}` : "";
-    durationEl.textContent = data.duration ? `Durée : ${data.duration}` : "";
+    // ===== UI =====
+    thumb.src = data.thumbnails.high.url;
+    titleEl.textContent = data.title;
+    channelEl.textContent = "Chaîne : " + data.channelTitle;
+    durationEl.textContent = "Durée : " + data.duration;
 
-    // miniature (high si possible)
-    const img =
-      data.thumbnails?.maxres?.url ||
-      data.thumbnails?.standard?.url ||
-      data.thumbnails?.high?.url ||
-      data.thumbnails?.medium?.url ||
-      data.thumbnails?.default?.url ||
-      "";
-
-    thumb.src = img;
-    thumb.style.display = img ? "block" : "none";
-
-    lastWatchUrl = data.watchUrl || "";
-
-    // Bouton ouvrir
     btnOpen.onclick = () => {
-      if (!lastWatchUrl) return;
-
-      // Dans Telegram, ouvre via WebApp.openLink si dispo
-      if (tg?.openLink) tg.openLink(lastWatchUrl);
-      else window.open(lastWatchUrl, "_blank");
+      window.open(data.watchUrl, "_blank");
     };
 
-    // Bouton partager
     btnShare.onclick = () => {
-      if (!lastWatchUrl) return;
-
-      // Si dans Telegram : partager via lien t.me/share/url (simple et fiable)
-      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(lastWatchUrl)}&text=${encodeURIComponent(data.title || "YouTube")}`;
-      if (tg?.openLink) tg.openLink(shareUrl);
-      else window.open(shareUrl, "_blank");
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.openTelegramLink(
+          `https://t.me/share/url?url=${encodeURIComponent(data.watchUrl)}&text=${encodeURIComponent(data.title)}`
+        );
+      } else {
+        navigator.share({
+          title: data.title,
+          url: data.watchUrl
+        });
+      }
     };
 
-    // Téléchargement : caché par défaut (pas de MP4 fourni)
+    // Pas de téléchargement réel (respect YouTube)
     btnDownload.classList.add("hidden");
-    btnDownload.removeAttribute("href");
 
-    showResult();
-  } catch (e) {
-    console.error(e);
-    showError("Failed to fetch : " + (e?.message || "Erreur inconnue"));
-  } finally {
-    setLoading(false);
+    result.classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showError("Failed to fetch");
   }
 });
