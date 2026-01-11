@@ -1,4 +1,18 @@
 export default async function handler(req, res) {
+  // ✅ CORS : autoriser GitHub Pages + Telegram WebView
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+
+  // ✅ Préflight (Telegram envoie souvent OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // ... le reste de ton code ici
+}
+
+export default async function handler(req, res) {
   const input = req.query.url;
   if (!input) return res.status(400).json({ error: "Missing url" });
 
