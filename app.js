@@ -1,13 +1,5 @@
-// ===== CONFIG =====
 const API_BASE = "https://telegram-mini-app-three-dun.vercel.app";
 
-// Telegram WebApp (sécurité + UX)
-if (window.Telegram && Telegram.WebApp) {
-  Telegram.WebApp.ready();
-  Telegram.WebApp.expand();
-}
-
-// ===== ELEMENTS =====
 const ytInput = document.getElementById("ytUrl");
 const btnAnalyze = document.getElementById("btnAnalyze");
 const result = document.getElementById("result");
@@ -22,66 +14,100 @@ const btnOpen = document.getElementById("btnOpen");
 const btnShare = document.getElementById("btnShare");
 const btnDownload = document.getElementById("btnDownload");
 
-// ===== HELPERS =====
-function showError(msg) {
-  errorEl.textContent = msg;
+function setError(msg) {
+  errorEl.textContent = msg || "";
+}
+
+function hideResult() {
   result.classList.add("hidden");
 }
-
-function clearError() {
-  errorEl.textContent = "";
+function showResult() {
+  result.classList.remove("hidden");
 }
 
-// ===== ACTION =====
+function inTg() {
+  return !!(window.Telegram && Telegram.WebApp);
+}
+
+if (inTg()) {
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();
+}
+
+// ✅ Test réseau au chargement (important)
+(async () => {
+  try {
+    const pingUrl = `${API_BASE}/api/youtube-info?url=${encodeURIComponent("https://www.youtube.com/watch?v=dQw4w9WgXcQ")}`;
+    const r = await fetch(pingUrl, { method: "GET" });
+    // On ne remplit pas l’UI ici, juste pour vérifier que la requête passe dans Telegram
+    console.log("PING STATUS:", r.status);
+  } catch (e) {
+    console.error("PING FAIL:", e);
+  }
+})();
+
 btnAnalyze.addEventListener("click", async () => {
-  const url = ytInput.value.trim();
-  clearError();
+  const url = (ytInput.value || "").trim();
+  hideResult();
+  setError("");
 
   if (!url) {
-    showError("Veuillez coller un lien YouTube.");
+    setError("Colle un lien YouTube.");
     return;
   }
 
-  try {
-    const response = await fetch(
-      `${API_BASE}/api/youtube-info?url=${encodeURIComponent(url)}`
-    );
+  const apiUrl = `${API_BASE}/api/youtube-info?url=${encodeURIComponent(url)}`;
+  console.log("API URL =>", apiUrl);
 
-    if (!response.ok) {
-      throw new Error("Erreur API");
+  try {
+    const res = await fetch(apiUrl, {
+      method: "GET",
+      // headers simples (évite préflight CORS inutile)
+      headers: { "Accept": "application/json" }
+    });
+
+    console.log("RES OK?", res.ok, "STATUS:", res.status);
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status}: ${txt}`);
     }
 
-    const data = await response.json();
+    const data = await res.json();
+    console.log("DATA:", data);
 
-    // ===== UI =====
-    thumb.src = data.thumbnails.high.url;
-    titleEl.textContent = data.title;
-    channelEl.textContent = "Chaîne : " + data.channelTitle;
-    durationEl.textContent = "Durée : " + data.duration;
+    const img =
+      data.thumbnails?.high?.url ||
+      data.thumbnails?.medium?.url ||
+      data.thumbnails?.default?.url ||
+      "";
+
+    thumb.src = img;
+    titleEl.textContent = data.title || "";
+    channelEl.textContent = "Chaîne : " + (data.channelTitle || "");
+    durationEl.textContent = "Durée : " + (data.duration || "");
 
     btnOpen.onclick = () => {
-      window.open(data.watchUrl, "_blank");
+      const link = data.watchUrl;
+      if (!link) return;
+      if (inTg()) Telegram.WebApp.openLink(link);
+      else window.open(link, "_blank");
     };
 
     btnShare.onclick = () => {
-      if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.openTelegramLink(
-          `https://t.me/share/url?url=${encodeURIComponent(data.watchUrl)}&text=${encodeURIComponent(data.title)}`
-        );
-      } else {
-        navigator.share({
-          title: data.title,
-          url: data.watchUrl
-        });
-      }
+      const link = data.watchUrl;
+      if (!link) return;
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(data.title || "YouTube")}`;
+      if (inTg()) Telegram.WebApp.openTelegramLink(shareUrl);
+      else window.open(shareUrl, "_blank");
     };
 
-    // Pas de téléchargement réel (respect YouTube)
     btnDownload.classList.add("hidden");
-
-    result.classList.remove("hidden");
+    showResult();
   } catch (err) {
-    console.error(err);
-    showError("Failed to fetch");
+    console.error("FETCH ERROR:", err);
+
+    // ✅ on affiche le vrai message
+    setError("Erreur : " + (err?.message || "Failed to fetch"));
   }
 });
