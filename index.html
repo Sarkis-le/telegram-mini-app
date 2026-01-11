@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Télécharger vidéo</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="card">
+    <h1>📥 Télécharger vidéo</h1>
+
+    <label>Lien YouTube</label>
+    <input id="ytUrl" placeholder="Colle un lien YouTube ici" />
+
+    <button id="btnAnalyze">Analyser</button>
+
+    <div id="result" class="hidden">
+      <img id="thumb" alt="miniature"/>
+      <div class="meta">
+        <h2 id="title"></h2>
+        <p id="channel"></p>
+        <p id="duration"></p>
+      </div>
+
+      <div class="actions">
+        <button id="btnOpen">Ouvrir sur YouTube</button>
+        <button id="btnShare">Partager</button>
+        <!-- "Télécharger" seulement si tu as un MP4 à toi -->
+        <a id="btnDownload" class="btn-link hidden" download>⬇️ Télécharger (MP4)</a>
+      </div>
+    </div>
+
+    <p id="error" class="error"></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

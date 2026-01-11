@@ -1,0 +1,10 @@
+body { font-family: Arial, sans-serif; padding: 16px; background:#f4f4f4; }
+.card { background:#fff; border-radius:12px; padding:16px; max-width:520px; margin:0 auto; }
+input { width:100%; padding:10px; font-size:16px; margin:8px 0 12px; }
+button, .btn-link { width:100%; padding:12px; font-size:16px; border:0; border-radius:10px; cursor:pointer; }
+button { background:#2a7cff; color:#fff; }
+.actions { display:grid; gap:10px; margin-top:12px; }
+img { width:100%; border-radius:10px; margin-top:14px; }
+.hidden { display:none; }
+.error { color:#b00020; margin-top:10px; }
+.btn-link { display:block; text-align:center; text-decoration:none; background:#111; color:#fff; }
