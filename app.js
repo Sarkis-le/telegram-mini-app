@@ -1,7 +1,8 @@
 const tg = window.Telegram?.WebApp;
 if (tg) tg.ready();
 
-const API_BASE = "https://TON-DOMAINE-OU-RENDER-URL"; // ex: https://xxx.onrender.com
+const API_BASE = "https://telegram-mini-app-three-dun.vercel.app";
+
 
 const ytUrl = document.getElementById("ytUrl");
 const btnAnalyze = document.getElementById("btnAnalyze");
